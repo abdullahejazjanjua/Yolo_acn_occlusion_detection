@@ -26,7 +26,7 @@ class BackBone(nn.Module):
         x = self.block4(x)
         x = self.block5(x)
 
-        return x, (x3, x4)
+        return (x3, x4, x)
     
 if __name__ == "__main__":
     # Testing
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     out_channels = 32
     x = torch.randn((2, in_channels, 416, 416))
     model = BackBone()
-    output, x = model(x)
+    x = model(x)
     print(f"x3 shape: {x[0].shape}")
     print(f"x4 shape: {x[1].shape}")
-    print(f"Output shape: {output.shape}")
+    print(f"Output shape: {x[2].shape}")
