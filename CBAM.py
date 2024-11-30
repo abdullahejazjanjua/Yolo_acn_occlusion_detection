@@ -74,6 +74,7 @@ class ResBlock(nn.Module):
 
 
 if __name__ == "__main__":
+    # Testing
     in_channels = 64 
     out_channels = 128  
     x = torch.randn(2, in_channels, 208, 208) 

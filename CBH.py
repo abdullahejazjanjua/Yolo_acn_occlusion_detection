@@ -14,6 +14,7 @@ class CBH(nn.Module):
         return x
     
 if __name__ == "__main__":
+    # Testing
     in_channels = 3
     out_channels = 32
     x = torch.randn((2, in_channels, 416, 416))
