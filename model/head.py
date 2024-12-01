@@ -2,10 +2,10 @@ from model.CBH import *
 from libs import *
 
 class head(nn.Module):
-    def __init__(self, classes):
+    def __init__(self, classes, bounding_boxes=3):
         super().__init__()
         # (4 + 1 + C) × B
-        output = (4 + 1 + classes) * 3
+        output = (4 + 1 + classes) * bounding_boxes
         self.cbh01 = CBH(384, output, stride=1)
         self.cbh02 = CBH(768, output, stride=1)
         self.cbh03 = CBH(512, output, stride=1)
