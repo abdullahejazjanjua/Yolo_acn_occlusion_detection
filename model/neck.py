@@ -1,4 +1,4 @@
-from backbone import *
+from model.backbone import *
 from libs import *
 
 class neck(nn.Module):

@@ -1,6 +1,6 @@
 from libs import *
-from CBAM import *
-from CBH import *
+from model.CBAM import *
+from model.CBH import *
 
 class BackBone(nn.Module):
     def __init__(self):
