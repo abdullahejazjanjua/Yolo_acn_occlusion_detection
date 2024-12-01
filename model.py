@@ -17,7 +17,8 @@ class YOLO_ACN(nn.Module):
 
         return x
 
-
+    # TO DO: 
+        # Process the outputs to make predictions
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 416, 416))
