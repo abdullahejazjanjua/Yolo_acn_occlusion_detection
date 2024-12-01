@@ -1,9 +1,9 @@
 from libs import *
 
 class CBH(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, stride=2):
         super().__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, stride=2, kernel_size=1)
+        self.conv = nn.Conv2d(in_channels, out_channels, stride=stride, kernel_size=1)
         self.batch_norm = nn.BatchNorm2d(out_channels)
         self.hard_swish = nn.Hardswish()
     
