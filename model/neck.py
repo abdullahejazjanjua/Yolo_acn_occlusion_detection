@@ -21,11 +21,8 @@ class neck(nn.Module):
 
 if __name__ == "__main__":
     # Testing
-    in_channels = 3
-    out_channels = 32
-    x = torch.randn((2, in_channels, 416, 416))
-    backbone = BackBone()
-    backbone_output = backbone(x)
+    backbone_output = (torch.randn((2, 128, 52, 52)), torch.randn((2, 256, 26, 26)),\
+         torch.randn((2, 512, 13, 13)))
     neck = neck()
     x = neck(backbone_output)
     print(f"x3 shape: {x[0].shape}")
