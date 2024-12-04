@@ -4,10 +4,11 @@ from model.neck import *
 from model.backbone import *
 
 class YOLO_ACN(nn.Module):
-    def __init__(self, classes, anchors):
+    def __init__(self, classes, anchors, training=True):
         super().__init__()
         self.anchors = anchors
         self.classes = classes
+        self.training = training
         self.backbone = BackBone()
         self.neck = neck()
         self.head = head(classes, anchors)
@@ -22,13 +23,24 @@ class YOLO_ACN(nn.Module):
         # 5th channel is objectness
         # 6th channel gives class scores
         # Reshape to to get the form N num_boxes H W Predictions for each anchor box
+        if self.training:
+            high_level_features = einops.rearrange(high_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
+            mid_level_features = einops.rearrange(mid_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
+            low_level_features = einops.rearrange(low_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
+        else:
+            # The feature map has a grid of 13 rows and 13 columns, which gives you a total of 169
+            # Since, there are anchor boxes. So, we would get 169 * anchor boxes.
 
-        high_level_features = einops.rearrange(high_level_features, \
-                                               "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
-        mid_level_features = einops.rearrange(mid_level_features, \
-                                               "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
-        low_level_features = einops.rearrange(low_level_features, \
-                                               "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.anchors)
+            high_level_features = einops.rearrange(high_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes H W) P", num_boxes = self.anchors)
+            mid_level_features = einops.rearrange(mid_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes H W) P", num_boxes = self.anchors)
+            low_level_features = einops.rearrange(low_level_features, \
+                                                "N (num_boxes P) H W -> N (num_boxes H W) P", num_boxes = self.anchors)
+
         
         hll_bbox = high_level_features[..., :4] # Bbox coordinated for each box
         hll_objectness_score = high_level_features[..., 4:5] # Bbox coordinated for each box
@@ -64,7 +76,7 @@ class YOLO_ACN(nn.Module):
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 416, 416))
-    model = YOLO_ACN(80, 3)
+    model = YOLO_ACN(80, 3, False)
     x = model(x)
     print(f"High level bbox for 3 Anchor boxes: {x.high_level[0].shape}")
     print(f"High level objectness score for 3 Anchor boxes: {x.high_level[1].shape}")
