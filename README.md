@@ -10,6 +10,8 @@ This repository is under active development. The following components have been 
 - **Backbone**
 - **Neck**
 - **CBAM (Convolutional Block Attention Module)**
+- **Head**
+- **YOLO-ACN**
 
 ## Key Features
 
