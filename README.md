@@ -30,7 +30,7 @@ This repository is under active development. The following components have been 
 
 | Model         | mAP (Mean Average Precision) |
 |---------------|-------------------------------|
-| YOLOv8        | X%                            |
+| YOLOv8n        | 37%                            |
 | YOLO-ACN      | Y%                            |
 
 
