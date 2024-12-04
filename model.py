@@ -76,7 +76,7 @@ class YOLO_ACN(nn.Module):
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 416, 416))
-    model = YOLO_ACN(80, 3, False)
+    model = YOLO_ACN(classes=80, anchors=3, training=False)
     x = model(x)
     print(f"High level bbox for 3 Anchor boxes: {x.high_level[0].shape}")
     print(f"High level objectness score for 3 Anchor boxes: {x.high_level[1].shape}")
