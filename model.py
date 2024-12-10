@@ -88,7 +88,7 @@ class YOLO_ACN(nn.Module):
         ml_tx, ml_ty, ml_tw, ml_th = predictions["mid_level"][0][:, :, :, :, 0] , predictions["mid_level"][0][:, :, :, :, 1], predictions["mid_level"][0][:, :, :, :, 2], predictions["mid_level"][0][:, :, :, :, 3]
         ll_tx, ll_ty, ll_tw, ll_th = predictions["low_level"][0][:, :, :, :, 0] , predictions["low_level"][0][:, :, :, :, 1], predictions["low_level"][0][:, :, :, :, 2], predictions["low_level"][0][:, :, :, :, 3]  
 
-
+        # Converting relative tx,ty of a particular grid_cell to absolute image coordinates by doing bx = cx + sigmoid(tx) , by = cy + sigmoid(ty) 
         hl_cx = F.sigmoid(hl_tx) + hl_grid_x.float()
         hl_cy = F.sigmoid(hl_ty) + hl_grid_y.float()
         ml_cx = F.sigmoid(ml_tx) + ml_grid_x.float()
@@ -115,7 +115,7 @@ class YOLO_ACN(nn.Module):
         ll_anchor_width = einops.rearrange(ll_anchor_width, "A -> 1 A 1 1")
 
 
-
+        # These transformations tell the model how much to modify the anchor box's dimensions to get the final bounding box.
         hl_h = torch.exp(hl_th) * hl_anchor_height
         hl_w = torch.exp(hl_tw) * hl_anchor_width
         
