@@ -1,4 +1,4 @@
-from libs import *
+import torch.nn.functional as F  
 
 class YOLO_ACN_Loss():
     def __init__(self, IoU_threshold, eps=1e-8):
@@ -92,9 +92,10 @@ class YOLO_ACN_Loss():
             bboxes, objectness_score, classification_scores = predictions[level_predictions]
             bboxes_grd, objectness_score_grd, classification_scores_grd = ground_truth[0], ground_truth[1], ground_truth[2]
 
-            CIoU, enclosing_box_coordinates = self.compute_CIoU(bboxes, bboxes_grd)
+            CIoU = self.compute_CIoU(bboxes, bboxes_grd)
 
             objectness_loss = F.binary_cross_entropy_with_logits(objectness_score_grd, objectness_score)
+            print(f"GRD:  {classification_scores_grd} , PRED: {classification_scores}")
             classification_loss = F.cross_entropy(classification_scores, classification_scores_grd)
 
             total_loss += CIoU + objectness_loss + classification_loss
@@ -104,6 +105,7 @@ class YOLO_ACN_Loss():
         
 
 if __name__ == "__main__":
+    import torch
     loss_fn = YOLO_ACN_Loss(IoU_threshold=0.5)
 
     # Predictions (center_x, center_y, width, height)
@@ -116,3 +118,10 @@ if __name__ == "__main__":
 
     objectness_grd = torch.tensor([[[1.0]]])
     classification_grd = torch.tensor([[[1, 0]]])  # Class 0 is the ground truth
+
+    predictions = {
+    0: (bboxes_pred, objectness_pred, classification_pred)
+    }
+    ground_truth = (bboxes_grd, objectness_grd, classification_grd)
+    total_loss = loss_fn.forward(predictions, ground_truth)
+    print("Total Loss:", total_loss)
