@@ -59,7 +59,7 @@ class YOLO_ACN_Loss():
         
 
         v = 4/torch.pi * (
-            (torch.arctan(width_grd / height_grd) - torch.arctan(width_pred / height_pred)) **2
+            (torch.arctan(width_grd / height_grd + self.eps) - torch.arctan(width_pred / height_pred + self.eps)) **2
         )
 
         IoU, coordinates = self.Compute_IoU(bboxes, grd_truth)
@@ -77,13 +77,10 @@ class YOLO_ACN_Loss():
 
         alpha_ = v / ((1 - IoU) + v)
 
-
         CIoU = IoU - p / (c + self.eps) - alpha_ * v
 
         return CIoU
-
-
-        
+                
     def forward(self, predictions, ground_truth):
 
         total_loss = 0
@@ -95,10 +92,12 @@ class YOLO_ACN_Loss():
             CIoU = self.compute_CIoU(bboxes, bboxes_grd)
 
             objectness_loss = F.binary_cross_entropy_with_logits(objectness_score_grd, objectness_score)
-            print(f"GRD:  {classification_scores_grd} , PRED: {classification_scores}")
+            #print(f"GRD:  {classification_scores_grd} , PRED: {classification_scores}")
             classification_loss = F.cross_entropy(classification_scores, classification_scores_grd)
 
-            total_loss += CIoU + objectness_loss + classification_loss
+            print(f"Object Loss:  {objectness_loss}, Class loss: {classification_loss} and CIoU: {(1 - CIoU).mean()}")
+
+            total_loss += (1 - CIoU).mean() + objectness_loss + classification_loss
 
         
         return total_loss
@@ -109,19 +108,23 @@ if __name__ == "__main__":
     loss_fn = YOLO_ACN_Loss(IoU_threshold=0.5)
 
     # Predictions (center_x, center_y, width, height)
-    bboxes_pred = torch.tensor([[[5.0, 5.0, 4.0, 4.0]]])  # One predicted box
-    bboxes_grd = torch.tensor([[[5.5, 5.5, 4.0, 4.0]]])   # One ground truth box
+    bboxes_pred = torch.rand((2, 3, 13, 13, 4))  # Almost identical to ground truth     
+    bboxes_grd = torch.rand((2, 3, 13, 13, 4))
 
-    # Objectness scores and classification scores
-    objectness_pred = torch.tensor([[[0.9]]])
-    classification_pred = torch.tensor([[[0.7, 0.3]]])  # Two classes
+    # Objectness scores 
+    objectness_pred = torch.randn((2, 3, 13, 13, 1))
+    objectness_grd = torch.randint(0, 2, (2, 3, 13, 13, 1)).float()
 
-    objectness_grd = torch.tensor([[[1.0]]])
-    classification_grd = torch.tensor([[[1, 0]]])  # Class 0 is the ground truth
+    # classification scores
+    classification_scores = torch.randn(2, 3, 13, 13, 3)  # Example logits: shape [2, 3, 13, 13, 3]
+    classification_scores_grd = torch.randint(0, 3, (2, 3, 13, 13))  # Ground truth labels: shape [2, 3, 13, 13]
 
+    # Flattening the tensors to match expected shapes for cross_entropy
+    classification_scores = classification_scores.view(-1, 3)  # Flatten to [1014, 3]
+    classification_scores_grd = classification_scores_grd.view(-1)  # Flatten to [1014]
     predictions = {
-    0: (bboxes_pred, objectness_pred, classification_pred)
+    0: (bboxes_pred, objectness_pred, classification_scores)
     }
-    ground_truth = (bboxes_grd, objectness_grd, classification_grd)
+    ground_truth = (bboxes_grd, objectness_grd, classification_scores_grd)
     total_loss = loss_fn.forward(predictions, ground_truth)
     print("Total Loss:", total_loss)

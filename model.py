@@ -45,16 +45,16 @@ class YOLO_ACN(nn.Module):
         
         hll_bbox = high_level_features[..., :4] # Bbox coordinated for each box
         hll_objectness_score = high_level_features[..., 4:5] # Objectness score for each box
-        hll_classification_score = high_level_features[..., 5:] # classification score for each box
+        hll_classification_score = einops.rearrange(high_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
 
 
         mll_bbox = mid_level_features[..., :4] # Bbox coordinated for each box
         mll_objectness_score = mid_level_features[..., 4:5] # Objectness score for each box
-        mll_classification_score = mid_level_features[..., 5:] # classification score for each box
+        mll_classification_score = einops.rearrange(mid_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
 
         lll_bbox = low_level_features[..., :4] # Bbox coordinated for each box
         lll_objectness_score = low_level_features[..., 4:5] # Objectness score for each box
-        lll_classification_score = low_level_features[..., 5:] # classification score for each box
+        lll_classification_score = einops.rearrange(low_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
 
 
 
@@ -158,6 +158,6 @@ if __name__ == "__main__":
     model = YOLO_ACN(classes=3, anchors=anchors)
     x = model(x)
 
-    print(f"High level Shape: {x["high_level"][0].shape}")
-    print(f"Mid level Shape: {x["mid_level"][0].shape}")
-    print(f"low level Shape: {x["low_level"][0].shape}")
+    print(f"High level Shape: {x["high_level"][1].shape}")
+    print(f"Mid level Shape: {x["mid_level"][1].shape}")
+    print(f"low level Shape: {x["low_level"][1].shape}")
