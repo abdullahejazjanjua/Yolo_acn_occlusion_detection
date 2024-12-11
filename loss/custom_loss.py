@@ -1,5 +1,4 @@
 import torch.nn.functional as F  
-import torchvision.ops as to
 
 class YOLO_ACN_Loss():
     def __init__(self, IoU_threshold, eps=1e-8):
@@ -56,10 +55,7 @@ class YOLO_ACN_Loss():
 
         p = ((cx_pred - cx_grd)**2) + ((cy_pred - cy_grd)**2)
         
-
-        v = 4/torch.pi * (
-            (torch.arctan(width_grd / height_grd + self.eps) - torch.arctan(width_pred / height_pred + self.eps)) **2
-        )
+        v = (4 / (torch.pi**2)) * torch.pow((torch.atan(width_grd / height_grd) - torch.atan(width_pred / width_grd)), 2)
 
 
         IoU, coordinates = self.Compute_IoU(bboxes, grd_truth)
@@ -75,23 +71,10 @@ class YOLO_ACN_Loss():
         enclosing_y = y_max_enclosing - y_min_enclosing
         c = torch.sqrt(enclosing_x**2 + enclosing_y**2)
 
-        alpha_ = v / ((1 - IoU) + v)
+        alpha_ = v / (1 - IoU + v + self.eps)
         R_DIoU = p / (c + self.eps)
 
-        CIoU = 1 - IoU + R_DIoU + alpha_ * v
-        # Combine individual tensors into (N, 4) format
-        bboxes_pred_02 = torch.stack([x_min_pred, y_min_pred, x_max_pred, y_max_pred], dim=-1)  # Shape: (N, 4)
-        bboxes_grd_02 = torch.stack([x_min_grd, y_min_grd, x_max_grd, y_max_grd], dim=-1)      # Shape: (N, 4)
-
-        # Call the function with properly formatted inputs
-        CIoU_02 = to.complete_box_iou_loss(bboxes_pred_02, bboxes_grd_02)
-
-
-        
-
-        print(f"CIoU: Min {torch.min(CIoU)}, Max {torch.max(CIoU)}, Mean {CIoU.mean()}")
-        print(f"CIoU_02: Min {torch.min(CIoU_02)}, Max {torch.max(CIoU_02)}, Mean {CIoU_02.mean()}")        
-        
+        CIoU = 1 - IoU + R_DIoU + alpha_ * v        
 
         return CIoU
                 
@@ -121,8 +104,6 @@ if __name__ == "__main__":
     # Predictions (center_x, center_y, width, height)
     bboxes_pred = torch.rand((2, 3, 13, 13, 4))      
     bboxes_grd = torch.rand((2, 3, 13, 13, 4))
-    print(bboxes_pred.min(), bboxes_pred.max())
-    print(bboxes_grd.min(), bboxes_grd.max())
 
     # Objectness scores 
     objectness_pred = torch.randn((2, 3, 13, 13, 1))
