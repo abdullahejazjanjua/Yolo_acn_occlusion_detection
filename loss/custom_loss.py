@@ -70,8 +70,8 @@ class YOLO_ACN_Loss():
         enclosing_x = x_max_enclosing - x_min_enclosing
         enclosing_y = y_max_enclosing - y_min_enclosing
         c = torch.sqrt(enclosing_x**2 + enclosing_y**2)
-
-        alpha_ = v / (1 - IoU + v + self.eps)
+        with torch.no_grad():
+            alpha_ = v / (1 - IoU + v + self.eps)
         R_DIoU = p / (c + self.eps)
 
         CIoU = 1 - IoU + R_DIoU + alpha_ * v        
