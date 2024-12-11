@@ -1,4 +1,5 @@
 import torch.nn.functional as F  
+import torchvision.ops as to
 
 class YOLO_ACN_Loss():
     def __init__(self, IoU_threshold, eps=1e-8):
@@ -53,14 +54,13 @@ class YOLO_ACN_Loss():
         cx_pred, cy_pred, width_pred, height_pred = bboxes[...,0], bboxes[...,1], bboxes[...,2], bboxes[...,3]
         cx_grd, cy_grd, width_grd, height_grd = grd_truth[...,0], grd_truth[...,1], grd_truth[...,2], grd_truth[...,3]
 
-        p = torch.sqrt(
-            ((cx_pred - cx_grd)**2) + ((cy_pred - cy_grd)**2)
-        )
+        p = ((cx_pred - cx_grd)**2) + ((cy_pred - cy_grd)**2)
         
 
         v = 4/torch.pi * (
             (torch.arctan(width_grd / height_grd + self.eps) - torch.arctan(width_pred / height_pred + self.eps)) **2
         )
+
 
         IoU, coordinates = self.Compute_IoU(bboxes, grd_truth)
 
@@ -76,8 +76,22 @@ class YOLO_ACN_Loss():
         c = torch.sqrt(enclosing_x**2 + enclosing_y**2)
 
         alpha_ = v / ((1 - IoU) + v)
+        R_DIoU = p / (c + self.eps)
 
-        CIoU = IoU - p / (c + self.eps) - alpha_ * v
+        CIoU = 1 - IoU + R_DIoU + alpha_ * v
+        # Combine individual tensors into (N, 4) format
+        bboxes_pred_02 = torch.stack([x_min_pred, y_min_pred, x_max_pred, y_max_pred], dim=-1)  # Shape: (N, 4)
+        bboxes_grd_02 = torch.stack([x_min_grd, y_min_grd, x_max_grd, y_max_grd], dim=-1)      # Shape: (N, 4)
+
+        # Call the function with properly formatted inputs
+        CIoU_02 = to.complete_box_iou_loss(bboxes_pred_02, bboxes_grd_02)
+
+
+        
+
+        print(f"CIoU: Min {torch.min(CIoU)}, Max {torch.max(CIoU)}, Mean {CIoU.mean()}")
+        print(f"CIoU_02: Min {torch.min(CIoU_02)}, Max {torch.max(CIoU_02)}, Mean {CIoU_02.mean()}")        
+        
 
         return CIoU
                 
@@ -92,12 +106,9 @@ class YOLO_ACN_Loss():
             CIoU = self.compute_CIoU(bboxes, bboxes_grd)
 
             objectness_loss = F.binary_cross_entropy_with_logits(objectness_score_grd, objectness_score)
-            #print(f"GRD:  {classification_scores_grd} , PRED: {classification_scores}")
             classification_loss = F.cross_entropy(classification_scores, classification_scores_grd)
-
-            print(f"Object Loss:  {objectness_loss}, Class loss: {classification_loss} and CIoU: {(1 - CIoU).mean()}")
-
-            total_loss += (1 - CIoU).mean() + objectness_loss + classification_loss
+            
+            total_loss += CIoU.mean() + objectness_loss + classification_loss
 
         
         return total_loss
@@ -108,20 +119,21 @@ if __name__ == "__main__":
     loss_fn = YOLO_ACN_Loss(IoU_threshold=0.5)
 
     # Predictions (center_x, center_y, width, height)
-    bboxes_pred = torch.rand((2, 3, 13, 13, 4))  # Almost identical to ground truth     
+    bboxes_pred = torch.rand((2, 3, 13, 13, 4))      
     bboxes_grd = torch.rand((2, 3, 13, 13, 4))
+    print(bboxes_pred.min(), bboxes_pred.max())
+    print(bboxes_grd.min(), bboxes_grd.max())
 
     # Objectness scores 
     objectness_pred = torch.randn((2, 3, 13, 13, 1))
     objectness_grd = torch.randint(0, 2, (2, 3, 13, 13, 1)).float()
 
     # classification scores
-    classification_scores = torch.randn(2, 3, 13, 13, 3)  # Example logits: shape [2, 3, 13, 13, 3]
-    classification_scores_grd = torch.randint(0, 3, (2, 3, 13, 13))  # Ground truth labels: shape [2, 3, 13, 13]
+    classification_scores = torch.randn(2, 3, 13, 13, 3) 
+    classification_scores_grd = torch.randint(0, 3, (2, 3, 13, 13))  
 
-    # Flattening the tensors to match expected shapes for cross_entropy
-    classification_scores = classification_scores.view(-1, 3)  # Flatten to [1014, 3]
-    classification_scores_grd = classification_scores_grd.view(-1)  # Flatten to [1014]
+    classification_scores = classification_scores.view(-1, 3)  
+    classification_scores_grd = classification_scores_grd.view(-1)  
     predictions = {
     0: (bboxes_pred, objectness_pred, classification_scores)
     }
