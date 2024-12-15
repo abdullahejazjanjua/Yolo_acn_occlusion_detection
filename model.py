@@ -2,14 +2,15 @@ from libs import *
 from model.head import *
 from model.neck import *
 from model.backbone import *
+from loss.metric import *
+import torchvision.ops as ops
 
 class YOLO_ACN(nn.Module):
-    def __init__(self, classes, anchors, training=True):
+    def __init__(self, classes, anchors):
         super().__init__()
         self.anchors = anchors
         self.number_of_anchors = 3
         self.classes = classes
-        self.training = training
         self.backbone = BackBone()
         self.neck = neck()
         self.head = head(classes, self.number_of_anchors)
@@ -24,13 +25,13 @@ class YOLO_ACN(nn.Module):
         # 5th channel is objectness
         # 6th channel gives class scores
         # Reshape to to get the form N num_boxes H W Predictions for each anchor box
-        if self.training:
-            high_level_features = einops.rearrange(high_level_features, \
+        high_level_features = einops.rearrange(high_level_features, \
                                                 "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.number_of_anchors)
-            mid_level_features = einops.rearrange(mid_level_features, \
+        mid_level_features = einops.rearrange(mid_level_features, \
                                                 "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.number_of_anchors)
-            low_level_features = einops.rearrange(low_level_features, \
-                                                "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.number_of_anchors)
+        low_level_features = einops.rearrange(low_level_features, \
+                                                        "N (num_boxes P) H W -> N (num_boxes) H W P", num_boxes = self.number_of_anchors)
+        '''
         else:
             # The feature map has a grid of 13 rows and 13 columns, which gives you a total of 169
             # Since, there are anchor boxes. So, we would get 169 * anchor boxes.
@@ -41,20 +42,20 @@ class YOLO_ACN(nn.Module):
                                                 "N (num_boxes P) H W -> N (num_boxes H W) P", num_boxes = self.number_of_anchors)
             low_level_features = einops.rearrange(low_level_features, \
                                                 "N (num_boxes P) H W -> N (num_boxes H W) P", num_boxes = self.number_of_anchors)
-
+        '''
         
         hll_bbox = high_level_features[..., :4] # Bbox coordinated for each box
         hll_objectness_score = high_level_features[..., 4:5] # Objectness score for each box
-        hll_classification_score = einops.rearrange(high_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
+        hll_classification_score = high_level_features[..., 5:]# classification score for each box
 
 
         mll_bbox = mid_level_features[..., :4] # Bbox coordinated for each box
         mll_objectness_score = mid_level_features[..., 4:5] # Objectness score for each box
-        mll_classification_score = einops.rearrange(mid_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
+        mll_classification_score = mid_level_features[..., 5:] # classification score for each box
 
         lll_bbox = low_level_features[..., :4] # Bbox coordinated for each box
         lll_objectness_score = low_level_features[..., 4:5] # Objectness score for each box
-        lll_classification_score = einops.rearrange(low_level_features[..., 5:], "N num_boxes H W P -> (N num_boxes H W) P") # classification score for each box
+        lll_classification_score = low_level_features[..., 5:] # classification score for each box
 
 
 
@@ -131,8 +132,6 @@ class YOLO_ACN(nn.Module):
         predictions["low_level"] = (torch.stack([ll_cx, ll_cy, ll_h, ll_w], dim=-1), predictions['low_level'][1], predictions['low_level'][2])
 
         return predictions
-
-
     
     def forward(self, x):
         x = self.backbone(x)
@@ -158,6 +157,32 @@ if __name__ == "__main__":
     model = YOLO_ACN(classes=3, anchors=anchors)
     x = model(x)
 
-    print(f"High level Shape: {x["high_level"][1].shape}")
-    print(f"Mid level Shape: {x["mid_level"][1].shape}")
-    print(f"low level Shape: {x["low_level"][1].shape}")
+    print(f"High level Shape: {x["high_level"][0].shape}")
+    print(f"High level objectness score Shape: {x["high_level"][1].shape}")
+    print(f"High level classification score Shape: {x["high_level"][2].shape}")
+    final_score = x["high_level"][2] * x["high_level"][1]
+    print(f"High level final Shape: {final_score.shape}")
+    max_class_score, class_id = final_score.max(dim=-1)
+    print(max_class_score.shape, class_id.shape)
+
+    boxes = x["high_level"][0].reshape(-1, 4)  # Shape: (num_boxes, 4)
+    scores = (x["high_level"][1] * x["high_level"][2]).reshape(-1)  # Shape: (num_boxes,)
+
+    final_scores = x["high_level"][1] * x["high_level"][2]  # Shape: [N, num_anchors, H, W, 3]
+
+    # select the bboxes with max score among classes C
+    final_scores_max, _ = final_scores.max(dim=-1)  # Shape: [N, num_anchors, H, W]
+
+    boxes = einops.rearrange(x["high_level"][0], "N num_anchors H W P -> (N num_anchors H W) P" ) # Shape: [num_boxes, 4]
+    scores = einops.rearrange(final_scores_max, "N num_anchors H W -> (N num_anchors H W)") # Shape: [num_boxes]
+    
+
+    print(f"Boxes shape: {boxes.shape}")
+    print(f"Scores shape: {scores.shape}")
+
+    # Step 4: Apply NMS
+    iou_threshold = 0.5
+    selected_indices = ops.nms(boxes, scores, iou_threshold)
+
+    print(f"Selected indices: {selected_indices}")
+    print (f"Bboxes:  {boxes[selected_indices].shape}")
