@@ -4,7 +4,7 @@ This repository contains my implementation of **YOLO-ACN**, as described in the 
 
 ## Current Status
 
-**Project Paused**  
+**⚠️ Project Paused**  
 This project implements key components of YOLO-ACN but training/evaluation is incomplete. 
 All major architectural components are implemented and ready for integration.
 
