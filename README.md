@@ -4,14 +4,23 @@ This repository contains my implementation of **YOLO-ACN**, as described in the 
 
 ## Current Status
 
-**Work in Progress**  
-This repository is under active development. The following components have been implemented:
+## Current Status
+**⚠️ Project Paused**  
+This project implements key components of YOLO-ACN but training/evaluation is incomplete. 
+All major architectural components are implemented and ready for integration.
 
-- **Backbone**
-- **Neck**
-- **CBAM (Convolutional Block Attention Module)**
-- **Head**
-- **YOLO-ACN**
+**Completed:**
+- ✅ Backbone architecture
+- ✅ Neck implementation  
+- ✅ CBAM (Convolutional Block Attention Module)
+- ✅ Detection Head
+- ✅ YOLO-ACN model integration
+
+**Remaining Work:**
+- Training pipeline completion
+- Loss function optimization
+- Evaluation metrics implementation
+- Hyperparameter tuning
 
 ## Key Features
 
@@ -33,10 +42,6 @@ This repository is under active development. The following components have been 
 | YOLOv8n        | 37%                            |
 | YOLO-ACN      | Y%                            |
 
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgements
 
